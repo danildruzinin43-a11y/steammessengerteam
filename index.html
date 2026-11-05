@@ -1,0 +1,1134 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, maximum-scale=1">
+<meta name="theme-color" content="#17212b">
+<title>SteamChat — мессенджер для геймеров</title>
+<style>
+  :root{
+    --bg:#0e1621; --bg2:#17212b; --bg3:#1f2c38; --bg4:#2b5278;
+    --panel:#17212b; --input:#242f3d;
+    --accent:#237cff; --accent2:#2b5278;
+    --text:#f5f5f5; --muted:#708499; --muted2:#94a9c1;
+    --out:#2b5278; --in:#182533;
+    --green:#00c853; --red:#ff4d4d; --gold:#ffb300;
+    --radius:14px;
+    font-size:16px;
+  }
+  *{box-sizing:border-box; -webkit-tap-highlight-color:transparent;}
+  html,body{margin:0;padding:0;height:100%;}
+  body{
+    font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"Helvetica Neue",Arial,sans-serif;
+    background:var(--bg); color:var(--text);
+    overscroll-behavior:none;
+  }
+  button{font-family:inherit;cursor:pointer;border:none;background:none;color:inherit;}
+  input,textarea{font-family:inherit;color:inherit;}
+  a{color:var(--accent);}
+  .hidden{display:none !important;}
+
+  /* ====== AUTH SCREEN ====== */
+  #auth{
+    position:fixed;inset:0;z-index:50;
+    display:flex;align-items:center;justify-content:center;padding:16px;
+    background:radial-gradient(1200px 700px at 80% -10%, #1b3a5a 0%, var(--bg) 55%);
+    overflow-y:auto;
+  }
+  .auth-card{
+    width:100%;max-width:400px;background:var(--panel);border-radius:20px;
+    padding:28px 24px;box-shadow:0 20px 60px rgba(0,0,0,.5);
+  }
+  .auth-logo{display:flex;align-items:center;gap:10px;margin-bottom:20px;}
+  .auth-logo .lg{width:42px;height:42px;
+    background:linear-gradient(135deg,var(--accent),#0b3d91);border-radius:12px;
+    display:flex;align-items:center;justify-content:center;font-size:24px;}
+  .auth-logo h1{margin:0;font-size:20px;}
+  .auth-logo p{margin:0;font-size:12px;color:var(--muted);}
+  .field{margin-bottom:14px;}
+  .field label{display:block;font-size:13px;color:var(--muted2);margin-bottom:6px;}
+  .field input,.field textarea{
+    width:100%;padding:12px 14px;background:var(--input);border:1px solid transparent;
+    border-radius:10px;font-size:15px;outline:none;transition:.2s;
+  }
+  .field input:focus,.field textarea:focus{border-color:var(--accent);}
+  .btn{
+    padding:12px 16px;border-radius:10px;font-size:15px;font-weight:600;
+    transition:.15s;color:#fff;
+  }
+  .btn:active{transform:scale(.98);}
+  .btn-primary{background:var(--accent);width:100%;}
+  .btn-primary:hover{background:#2b87ff;}
+  .btn-steam{background:#171a21;border:1px solid #2e3f54;width:100%;margin-top:8px;
+    display:flex;align-items:center;justify-content:center;gap:8px;}
+  .btn-steam:hover{background:#1e2933;}
+  .btn-ghost{background:var(--bg3);}
+  .divider{display:flex;align-items:center;color:var(--muted);font-size:12px;
+    margin:18px 0;gap:12px;}
+  .divider::before,.divider::after{content:"";flex:1;height:1px;background:var(--bg3);}
+  .switch-line{text-align:center;font-size:14px;color:var(--muted);margin-top:16px;}
+  .switch-line button{color:var(--accent);font-weight:600;}
+  .err{color:var(--red);font-size:13px;margin-top:8px;min-height:18px;}
+  .steam-card{background:#171a21;border:1px solid #2e3f54;border-radius:12px;padding:16px;margin-top:16px;text-align:center;}
+  .steam-ava{width:56px;height:56px;border-radius:50%;overflow:hidden;margin:0 auto 8px;background:linear-gradient(135deg,var(--accent),#0b3d91);display:flex;align-items:center;justify-content:center;font-size:26px;}
+  .steam-ava img{width:100%;height:100%;object-fit:cover;}
+  .steam-name{font-weight:700;color:#c7d5e0;}
+
+  /* ====== APP LAYOUT ====== */
+  #app{position:fixed;inset:0;display:none;}
+  #app.show{display:block;}
+  .app-shell{display:flex;height:100%;}
+  #sidebar{
+    width:340px;background:var(--bg);display:flex;flex-direction:column;
+    border-right:1px solid var(--bg3);flex-shrink:0;
+  }
+  #chatpanel{flex:1;display:flex;flex-direction:column;min-width:0;}
+
+  /* ====== SIDEBAR ====== */
+  .side-head{display:flex;align-items:center;gap:10px;padding:12px 16px;
+    background:var(--bg2);border-bottom:1px solid var(--bg3);}
+  .myava{width:40px;height:40px;border-radius:50%;background:linear-gradient(135deg,var(--accent),var(--accent2));
+    display:flex;align-items:center;justify-content:center;font-weight:700;position:relative;flex-shrink:0;}
+  .myava img{width:100%;height:100%;border-radius:50%;object-fit:cover;}
+  .myava .dot{position:absolute;bottom:0;right:0;width:12px;height:12px;background:var(--green);
+    border:2px solid var(--bg2);border-radius:50%;}
+  .side-head .me{flex:1;min-width:0;}
+  .side-head .me b{display:block;font-size:15px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+  .side-head .me span{font-size:12px;color:var(--muted);}
+  .iconbtn{font-size:18px;padding:6px;border-radius:8px;color:var(--muted2);}
+  .iconbtn:hover{background:var(--bg3);color:#fff;}
+  #searchbox{padding:8px 16px;}
+  #searchbox input{width:100%;padding:9px 14px;background:var(--input);border:none;
+    border-radius:10px;outline:none;font-size:14px;}
+  .tabs{display:flex;gap:4px;padding:0 12px 8px;}
+  .tabs .tab{flex:1;padding:9px;text-align:center;border-radius:10px;font-size:14px;
+    color:var(--muted);font-weight:600;}
+  .tabs .tab.active{background:var(--bg3);color:#fff;}
+  #chatlist{flex:1;overflow-y:auto;padding:0 8px;}
+  .chatitem{display:flex;gap:12px;padding:10px;border-radius:12px;cursor:pointer;align-items:center;}
+  .chatitem:hover{background:var(--bg2);}
+  .chatitem.active{background:var(--bg3);}
+  .cava{width:50px;height:50px;border-radius:50%;flex-shrink:0;position:relative;
+    display:flex;align-items:center;justify-content:center;font-weight:700;font-size:20px;background:linear-gradient(135deg,var(--accent2),var(--accent));}
+  .cava img{width:100%;height:100%;border-radius:50%;object-fit:cover;}
+  .cava.on::after{content:"";position:absolute;bottom:1px;right:1px;width:12px;height:12px;
+    background:var(--green);border:2px solid var(--bg);border-radius:50%;}
+  .cbody{flex:1;min-width:0;}
+  .cbody .row1{display:flex;justify-content:space-between;gap:8px;}
+  .cbody .row1 b{font-size:15px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+  .cbody .row1 time{font-size:12px;color:var(--muted);flex-shrink:0;}
+  .cbody .row2{display:flex;justify-content:space-between;gap:8px;margin-top:2px;}
+  .cbody .row2 span{font-size:13px;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+  .cbody .row2 i{font-style:normal;background:var(--accent);color:#fff;font-size:11px;
+    min-width:18px;height:18px;border-radius:9px;display:flex;align-items:center;justify-content:center;padding:0 5px;flex-shrink:0;}
+
+  /* ====== CHAT PANEL ====== */
+  #chathead{background:var(--bg2);border-bottom:1px solid var(--bg3);
+    padding:10px 16px;display:flex;align-items:center;gap:12px;}
+  #chathead .cava{width:40px;height:40px;font-size:16px;}
+  #chathead .mid{flex:1;min-width:0;}
+  #chathead .mid b{display:block;font-size:16px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+  #chathead .mid span{font-size:12px;color:var(--muted);}
+  #backbtn{display:none;}
+
+  #messages{flex:1;overflow-y:auto;padding:16px;display:flex;flex-direction:column;gap:4px;
+    background:
+      radial-gradient(900px 500px at 0% 100%, #132b42 0%, transparent 60%),
+      var(--bg);}
+  .msg{max-width:76%;padding:8px 12px;border-radius:15px;position:relative;font-size:14.5px;line-height:1.45;
+    box-shadow:0 1px 1px rgba(0,0,0,.2);}
+  .msg .name{font-size:12.5px;font-weight:700;margin-bottom:2px;}
+  .msg .date{float:right;font-size:11px;color:var(--muted);margin-left:8px;margin-top:6px;}
+  .msg.mine{align-self:flex-end;background:var(--out);border-bottom-right-radius:4px;text-align:left;}
+  .msg.theirs{align-self:flex-start;background:var(--in);border-bottom-left-radius:4px;}
+  .daydiv{display:flex;justify-content:center;margin:12px 0;}
+  .daydiv span{background:var(--bg2);color:var(--muted);font-size:12px;padding:4px 12px;border-radius:12px;}
+
+  .composer{background:var(--bg2);border-top:1px solid var(--bg3);padding:8px 12px;
+    padding-bottom:calc(8px + env(safe-area-inset-bottom));display:flex;gap:8px;align-items:flex-end;}
+  .composer input{flex:1;background:var(--input);border:none;border-radius:20px;padding:11px 16px;
+    outline:none;font-size:15px;}
+  .sendbtn{width:44px;height:44px;border-radius:50%;background:var(--accent);color:#fff;
+    font-size:20px;display:flex;align-items:center;justify-content:center;}
+  .sendbtn:hover{background:#2b87ff;}
+
+  .empty{flex:1;display:flex;align-items:center;justify-content:center;color:var(--muted);}
+  .empty div{text-align:center;padding:30px;font-size:17px;}
+  .empty small{display:block;color:var(--muted2);font-size:14px;margin-top:8px;}
+
+  .welcome{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;
+    padding:30px;text-align:center;gap:14px;}
+  .welcome .lg{width:80px;height:80px;border-radius:22px;
+    background:linear-gradient(135deg,var(--accent),#0b3d91);display:flex;align-items:center;justify-content:center;font-size:48px;box-shadow:0 10px 30px rgba(35,124,255,.3);}
+  .welcome h2{margin:0;font-size:22px;}
+  .welcome p{color:var(--muted);max-width:420px;line-height:1.5;margin:0;}
+  .welcome .hint{color:var(--muted2);font-size:13px;}
+
+  /* ====== STORIES ====== */
+  #storiesbar{background:var(--bg2);border-bottom:1px solid var(--bg3);padding:10px 12px;
+    display:flex;gap:14px;overflow-x:auto;flex-shrink:0;}
+  .story{display:flex;flex-direction:column;align-items:center;gap:4px;cursor:pointer;flex-shrink:0;width:66px;}
+  .story .ring{width:58px;height:58px;border-radius:50%;padding:3px;
+    background:conic-gradient(var(--accent),var(--accent2),var(--accent));}
+  .story.seen .ring{background:var(--bg4);}
+  .story .ringinner{width:100%;height:100%;border-radius:50%;background:var(--bg2);
+    display:flex;align-items:center;justify-content:center;font-size:24px;overflow:hidden;}
+  .story .ringinner img{width:100%;height:100%;object-fit:cover;}
+  .story span{font-size:12px;color:var(--muted);max-width:66px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+  #storyviewer{position:fixed;inset:0;z-index:60;background:#000;flex-direction:column;align-items:stretch;display:none;}
+  #storyviewer.show{display:flex;}
+  .sv-head{display:flex;align-items:center;gap:12px;padding:14px;color:#fff;}
+  .sv-head .cava{width:36px;height:36px;font-size:15px;}
+  .sv-head b{flex:1;}
+  .sv-body{flex:1;display:flex;align-items:center;justify-content:center;padding:12px;overflow:hidden;position:relative;}
+  .sv-note{max-width:80%;background:var(--bg3);padding:18px;border-radius:16px;text-align:center;font-size:18px;}
+  .sv-close{position:absolute;top:14px;right:16px;font-size:26px;color:#fff;background:rgba(0,0,0,.4);width:38px;height:38px;border-radius:50%;}
+  .sv-bounce{animation:pop .3s;}
+  @keyframes pop{from{transform:scale(.7);opacity:0;}to{transform:scale(1);opacity:1;}}
+
+  /* ====== MODAL / POPUP ====== */
+  .overlay{position:fixed;inset:0;background:rgba(0,0,0,.55);z-index:70;
+    display:flex;align-items:flex-end;justify-content:center;}
+  .overlay.center{align-items:center;padding:16px;}
+  .modal{background:var(--bg2);width:100%;max-width:520px;border-radius:20px 20px 0 0;
+    max-height:90vh;overflow-y:auto;padding:20px;animation:up .25s;}
+  .overlay.center .modal{border-radius:20px;max-width:460px;}
+  @keyframes up{from{transform:translateY(40px);opacity:0;}to{transform:none;opacity:1;}}
+  .modal h3{margin:0 0 16px;font-size:18px;}
+  .modal .close{float:right;font-size:22px;color:var(--muted);}
+  .navtabs{display:flex;gap:6px;background:var(--bg3);padding:4px;border-radius:12px;margin-bottom:18px;}
+  .navtabs .t{flex:1;text-align:center;padding:9px;border-radius:9px;font-weight:600;color:var(--muted);font-size:14px;}
+  .navtabs .t.active{background:var(--accent);color:#fff;}
+  .setrow{display:flex;justify-content:space-between;align-items:center;padding:14px 0;border-bottom:1px solid var(--bg3);gap:12px;}
+  .setrow:last-child{border-bottom:none;}
+  .setrow .lbl b{display:block;font-size:15px;}
+  .setrow .lbl span{display:block;font-size:12.5px;color:var(--muted);margin-top:2px;}
+  /* toggle */
+  .toggle{width:52px;height:30px;background:var(--bg4);border-radius:16px;position:relative;transition:.2s;flex-shrink:0;}
+  .toggle.on{background:var(--accent);}
+  .toggle::after{content:"";position:absolute;top:3px;left:3px;width:24px;height:24px;background:#fff;border-radius:50%;transition:.2s;}
+  .toggle.on::after{left:25px;}
+  .seg{display:flex;background:var(--bg3);padding:3px;border-radius:10px;flex-shrink:0;}
+  .seg button{padding:8px 14px;border-radius:8px;font-size:14px;color:var(--muted);}
+  .seg button.on{background:var(--accent);color:#fff;}
+  .note-item{background:var(--bg3);border-radius:12px;padding:12px;margin-bottom:10px;position:relative;}
+  .note-item p{margin:0 0 8px;font-size:14.5px;line-height:1.45;word-break:break-word;}
+  .note-item time{font-size:11px;color:var(--muted);}
+  .note-del{position:absolute;top:8px;right:8px;color:var(--red);font-size:16px;}
+  .flexrow{display:flex;gap:10px;margin-bottom:14px;}
+  .flexrow input{flex:1;}
+  .warn{background:rgba(255,77,77,.12);color:var(--red);padding:12px;border-radius:10px;font-size:13px;margin-top:16px;}
+  .about-ava{display:flex;align-items:center;gap:14px;margin-bottom:16px;}
+  .about-ava .big{width:64px;height:64px;border-radius:50%;font-size:30px;}
+  .account-info{margin-bottom:14px;font-size:14px;color:var(--muted2);}
+  .account-info b{color:var(--text);}
+
+  /* ====== DAILY COOKIE ====== */
+  #cookieOverlay{position:fixed;inset:0;z-index:100;display:none;align-items:center;justify-content:center;
+    padding:16px;background:#6b3f0f;overflow-y:auto;}
+  #cookieOverlay.show{display:flex;}
+  .cookie-card{background:#fff8ef;color:#4a2c0a;max-width:440px;width:100%;border-radius:22px;padding:26px;
+    text-align:center;box-shadow:0 20px 60px rgba(0,0,0,.5);animation:pop .4s;}
+  .cookie-card h2{margin:14px 0 10px;font-size:22px;color:#8a5a1f;}
+  .cookie-card p{line-height:1.55;color:#6b4a22;margin:0 0 16px;font-size:14.5px;}
+  .cookie-card ul{text-align:left;font-size:13.5px;line-height:1.7;color:#6b4a22;padding-left:18px;margin:0 0 16px;}
+  .cookie-card .btn{background:#8a5a1f;width:100%;}
+
+  /* ====== MOBILE ====== */
+  @media(max-width:720px){
+    #sidebar{width:100%;border-right:none;}
+    #chatpanel{position:fixed;inset:0;z-index:20;transform:translateX(100%);transition:transform .25s;background:var(--bg);}
+    #chatpanel.open{transform:none;}
+    #backbtn{display:flex;}
+    .msg{max-width:86%;}
+    .modal{border-radius:20px 20px 0 0;max-width:none;}
+  }
+  @media(min-width:721px){
+    .composer{padding-bottom:8px;}
+  }
+  ::-webkit-scrollbar{width:8px;height:8px;}
+  ::-webkit-scrollbar-thumb{background:var(--bg4);border-radius:4px;}
+  ::-webkit-scrollbar-track{background:transparent;}
+</style>
+</head>
+<body>
+
+<!-- ================= AUTH ================= -->
+<div id="auth">
+  <div class="auth-card">
+    <div class="auth-logo">
+      <div class="lg">&#127918;</div>
+      <div>
+        <h1>SteamChat</h1>
+        <p>Общайся с друзьями из Steam</p>
+      </div>
+    </div>
+
+    <!-- LOGIN FORM -->
+    <div id="loginView">
+      <div class="field">
+        <label>Ник или Email</label>
+        <input id="loginId" type="text" autocomplete="username" aria-label="Ник или Email" placeholder="Ваш ник">
+      </div>
+      <div class="field">
+        <label>Пароль</label>
+        <input id="loginPass" type="password" autocomplete="current-password" aria-label="Пароль" placeholder="••••••••">
+      </div>
+      <button class="btn btn-primary" onclick="doLogin()">Войти</button>
+      <div class="divider">или</div>
+      <button class="btn btn-steam" onclick="steamAuth()">
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="#66c0f4"><path d="M11.98 0C5.4 0 0 5.4 0 11.98c0 4.9 3 9.1 7.3 10.8l3.6-8.6c.7 0 3-.1 3-.1.9.9 2 1.3 3.2 1.3 2.7 0 4.9-2.2 4.9-4.9s-2.2-4.9-4.9-4.9c-2.6 0-4.7 2-4.9 4.6l-4.6 2.6c-.1 0 0 0 0 0C5.3 6.4 8.3 3 11.98 3c4.7 0 8.5 3.8 8.5 8.5s-3.8 8.5-8.5 8.5h-.1l-.9 2.1C20.2 21.4 24 16.7 24 11.98 24 5.4 18.6 0 11.98 0zm1.5 7.6c1.7 0 3 1.3 3 3s-1.3 3-3 3-3-1.3-3-3 1.3-3 3-3z"/></svg>
+        Войти через Steam
+      </button>
+      <div class="err" id="loginErr"></div>
+      <div class="switch-line">Нет аккаунта? <button onclick="showView('reg')">Создать аккаунт</button></div>
+    </div>
+
+    <!-- REG FORM -->
+    <div id="regView" class="hidden">
+      <div class="field">
+        <label>Ник</label>
+        <input id="regNick" type="text" aria-label="Ник" placeholder="Ваш ник в чате">
+      </div>
+      <div class="field">
+        <label>Email</label>
+        <input id="regEmail" type="email" aria-label="Email" placeholder="you@example.com">
+      </div>
+      <div class="field">
+        <label>Пароль</label>
+        <input id="regPass" type="password" aria-label="Пароль" placeholder="Минимум 4 символа">
+      </div>
+      <div class="field">
+        <label>О себе</label>
+        <textarea id="regBio" rows="2" aria-label="О себе" placeholder="Пара слов о себе (можно позже)"></textarea>
+      </div>
+      <button class="btn btn-primary" onclick="doRegister()">Создать аккаунт</button>
+      <div class="err" id="regErr"></div>
+      <div class="switch-line">Уже есть аккаунт? <button onclick="showView('login')">Войти</button></div>
+    </div>
+
+    <!-- STEAM REQUIRED VIEW -->
+    <div id="steamView" class="hidden">
+      <div class="auth-logo">
+        <div class="lg">&#127918;</div>
+        <div>
+          <h1>Подключите Steam</h1>
+          <p>Чтобы пользоваться SteamChat, нужна привязка Steam</p>
+        </div>
+      </div>
+      <p style="font-size:14px;color:var(--muted2);line-height:1.5;margin:0 0 14px;">
+        Вы вошли как <b style="color:var(--text)">«<span id="steamPendingNick"></span>»</b>. Без привязки Steam общение с друзьями невозможно — подключите свой профиль, чтобы продолжить.
+      </p>
+      <button class="btn btn-steam" onclick="steamAuth()">
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="#66c0f4"><path d="M11.98 0C5.4 0 0 5.4 0 11.98c0 4.9 3 9.1 7.3 10.8l3.6-8.6c.7 0 3-.1 3-.1.9.9 2 1.3 3.2 1.3 2.7 0 4.9-2.2 4.9-4.9s-2.2-4.9-4.9-4.9c-2.6 0-4.7 2-4.9 4.6l-4.6 2.6c-.1 0 0 0 0 0C5.3 6.4 8.3 3 11.98 3c4.7 0 8.5 3.8 8.5 8.5s-3.8 8.5-8.5 8.5h-.1l-.9 2.1C20.2 21.4 24 16.7 24 11.98 24 5.4 18.6 0 11.98 0zm1.5 7.6c1.7 0 3 1.3 3 3s-1.3 3-3 3-3-1.3-3-3 1.3-3 3-3z"/></svg>
+        Войти через Steam
+      </button>
+      <div class="err" id="steamErr"></div>
+      <div class="switch-line"><button onclick="logout(true)">Выйти</button></div>
+    </div>
+  </div>
+</div>
+
+<!-- ================= APP ================= -->
+<div id="app">
+  <div class="app-shell">
+    <!-- SIDEBAR -->
+    <aside id="sidebar">
+      <div class="side-head">
+        <div class="myava" id="myAva"></div>
+        <div class="me">
+          <b id="myName"></b>
+          <span id="myStatus">в сети</span>
+        </div>
+        <button class="iconbtn" title="Настройки" onclick="openSettings()">&#9881;</button>
+        <button class="iconbtn" title="Выход" onclick="logout()">&#10227;</button>
+      </div>
+      <div id="searchbox"><input id="searchInput" type="text" aria-label="Поиск" placeholder="Поиск" oninput="renderChats()"></div>
+      <div class="tabs">
+        <button class="tab active" data-tab="chats" onclick="switchTab('chats')">Чаты</button>
+        <button class="tab" data-tab="steam" onclick="switchTab('steam')">Steam</button>
+      </div>
+      <div id="chatlist"></div>
+    </aside>
+
+    <!-- CHAT PANEL -->
+    <section id="chatpanel">
+      <div id="chathead" class="hidden">
+        <button class="iconbtn" id="backbtn" onclick="closeChat()">&#10094;</button>
+        <div class="cava" id="headAva"></div>
+        <div class="mid">
+          <b id="headName"></b>
+          <span id="headStatus"></span>
+        </div>
+      </div>
+
+      <!-- STORIES BAR (mobile under head) -->
+      <div id="storiesbar" class="hidden"></div>
+
+      <div id="welcome" class="welcome">
+        <div class="lg">&#127918;</div>
+        <h2>Добро пожаловать в SteamChat!</h2>
+        <p>Выберите чат слева или напишите другу из Steam. Делись историями, заметками и следи за настройками уведомлений.</p>
+        <div class="hint" id="welcomeHint"></div>
+      </div>
+
+      <div id="messages" class="hidden"></div>
+      <div id="composer" class="composer hidden">
+        <input id="msgInput" type="text" aria-label="Сообщение" placeholder="Сообщение…" onkeydown="if(event.key==='Enter')sendMsg()">
+        <button class="sendbtn" onclick="sendMsg()">&#10148;</button>
+      </div>
+    </section>
+  </div>
+</div>
+
+<!-- ================= STORY VIEWER ================= -->
+<div id="storyviewer">
+  <div class="sv-head">
+    <div class="cava" id="svAva"></div>
+    <b id="svName"></b>
+    <button class="iconbtn sv-close" onclick="closeStory()">&#10005;</button>
+  </div>
+  <div class="sv-body" id="svBody" onclick="nextStory()"></div>
+</div>
+
+<!-- ================= COOKIE DAILY ================= -->
+<div id="cookieOverlay">
+  <div class="cookie-card">
+    <svg width="130" height="130" viewBox="0 0 130 130">
+      <defs>
+        <radialGradient id="cg" cx="50%" cy="45%" r="60%">
+          <stop offset="0%" stop-color="#f6c98a"/>
+          <stop offset="100%" stop-color="#d8923f"/>
+        </radialGradient>
+      </defs>
+      <ellipse cx="65" cy="65" rx="56" ry="54" fill="url(#cg)" stroke="#b4702b" stroke-width="3"/>
+      <circle cx="42" cy="44" r="6" fill="#7a4a1a"/>
+      <circle cx="78" cy="36" r="5" fill="#7a4a1a"/>
+      <circle cx="62" cy="62" r="5" fill="#7a4a1a"/>
+      <circle cx="90" cy="66" r="6" fill="#7a4a1a"/>
+      <circle cx="48" cy="84" r="6" fill="#7a4a1a"/>
+      <circle cx="78" cy="88" r="5" fill="#7a4a1a"/>
+      <circle cx="34" cy="66" r="5" fill="#7a4a1a"/>
+      <path d="M18 30 Q30 20 44 26" stroke="#8a5a1f" stroke-width="3" fill="none" stroke-linecap="round"/>
+    </svg>
+    <h2>Мы используем ваши куки-данные</h2>
+    <p id="cookieMsg"></p>
+    <ul>
+      <li><b>Запоминаем вас</b> — чтобы мессенджер не «слетал» и не приходилось входить заново.</li>
+      <li><b>Сохраняем настройки</b> — выбранный способ уведомлений и тему.</li>
+      <li><b>Держим сессию</b> — вы остаётесь в чате даже после перезагрузки страницы.</li>
+    </ul>
+    <button class="btn" onclick="acceptCookies()">Принять и продолжить</button>
+  </div>
+</div>
+
+<!-- ================= SETTINGS MODAL ================= -->
+<div id="settingsModal" class="overlay center hidden">
+  <div class="modal">
+    <button class="close" onclick="closeSettings()">&#10005;</button>
+    <h3>Настройки</h3>
+    <div class="navtabs">
+      <button class="t active" data-s="notif" onclick="switchSet('notif')">Уведомления</button>
+      <button class="t" data-s="profile" onclick="switchSet('profile')">Профиль и заметки</button>
+      <button class="t" data-s="about" onclick="switchSet('about')">О себе</button>
+    </div>
+
+    <!-- NOTIFICATIONS -->
+    <div id="set-notif">
+      <div class="setrow">
+        <div class="lbl"><b>Уведомления</b><span>Включить уведомления о новых сообщениях</span></div>
+        <div class="toggle on" id="notifToggle" onclick="toggleNotif()"></div>
+      </div>
+      <div class="setrow">
+        <div class="lbl"><b>Способ оповещения</b><span>Как напоминать о приходящих сообщениях</span></div>
+        <div class="seg" id="notifSeg">
+          <button data-n="silent" class="on" onclick="setNotifMode('silent')">Без звука</button>
+          <button data-n="vibro" onclick="setNotifMode('vibro')">Вибрация</button>
+        </div>
+      </div>
+      <p style="font-size:13px;color:var(--muted);line-height:1.5;margin-top:14px;">
+        <b style="color:var(--muted2)">Без звука</b> — при получении сообщения не будет ни звуков, ни вибрации.
+        <b style="color:var(--muted2)">Вибрация</b> — устройство вибрирует при каждом новом сообщении.
+      </p>
+    </div>
+
+    <!-- PROFILE & NOTES -->
+    <div id="set-profile" class="hidden">
+      <div class="account-info" id="accInfo"></div>
+      <h4 style="margin:14px 0 10px;color:var(--muted2);font-size:14px;">Мои заметки</h4>
+      <div class="flexrow">
+        <input id="noteInput" type="text" aria-label="Заметка" placeholder="Что-то записать…" onkeydown="if(event.key==='Enter')addNote()">
+        <button class="btn btn-primary" style="width:auto;white-space:nowrap;" onclick="addNote()">Добавить</button>
+      </div>
+      <div id="notesList"></div>
+    </div>
+
+    <!-- ABOUT -->
+    <div id="set-about" class="hidden">
+      <div class="about-ava">
+        <div class="myava big" id="aboutAva"></div>
+        <div style="flex:1;">
+          <b id="aboutName" style="font-size:17px;"></b>
+          <div style="font-size:13px;color:var(--muted);margin-top:2px;">Ник и аватар показываются в чатах</div>
+        </div>
+      </div>
+      <div class="field">
+        <label>О себе</label>
+        <input id="bioInput" type="text" maxlength="120" aria-label="О себе" placeholder="Расскажи о себе">
+      </div>
+      <button class="btn btn-primary" onclick="saveBio()">Сохранить</button>
+      <div class="err" id="bioErr"></div>
+      <div class="setrow" style="margin-top:18px;">
+        <div class="lbl"><b>Статус в сети</b><span>Показывать друзьям, что вы онлайн</span></div>
+        <div class="toggle on" id="onlineToggle" onclick="toggleOnline()"></div>
+      </div>
+      <div class="flexrow" style="margin-top:18px;">
+        <button class="btn btn-ghost" style="flex:1;" onclick="steamAuth()">Привязать Steam</button>
+      </div>
+      <div class="warn">Выйти из аккаунта, чтобы безопасно передать устройство другому человеку.</div>
+      <button class="btn btn-ghost" style="width:100%;color:var(--red);margin-top:10px;" onclick="logout()">Выйти</button>
+    </div>
+  </div>
+</div>
+
+<script>
+/* ============================================================
+   SteamChat — автономный демо-мессенджер
+   Все данные хранятся локально: localStorage (данные) + Cookie (сессия).
+   Привязка Steam имитирует OAuth-обложку: для реального API нужен сервер.
+   ============================================================ */
+
+const LS_PREFIX = "steamchat_";
+const COOKIE_NAME = "steamchat_session";
+const NOTIF_KEY = LS_PREFIX + "notif";
+const NOTIF_MODE_KEY = LS_PREFIX + "notifmode";
+const COOKIE_ACCEPT_KEY = LS_PREFIX + "cookie_last";
+
+const $$ = (s, e=document)=>e.querySelector(s);
+let currentUser = null;
+let activeChat = null;
+let unread = {};       // userId -> count
+let state = { users:[], chats:{}, notes:{}, bio:{} };
+
+/* ---------- Storage helpers with fallback (sandboxed previews) ---------- */
+function lsSet(k,v){ try{ localStorage.setItem(k, JSON.stringify(v)); }catch(e){ /* in-memory */ } }
+function lsGet(k,d){ try{ const v=localStorage.getItem(k); return v?JSON.parse(v):d; }catch(e){ return d; } }
+
+/* ---------- Cookie helpers ---------- */
+function setCookie(name, value, days){
+  let exp="";
+  if(days){ const d=new Date(); d.setTime(d.getTime()+days*86400000); exp="; expires="+d.toUTCString(); }
+  document.cookie = name+"="+encodeURIComponent(value)+exp+"; path=/; SameSite=Lax";
+}
+function getCookie(name){
+  const m = document.cookie.match(new RegExp("(?:^|; )"+name+"=([^;]*)"));
+  return m ? decodeURIComponent(m[1]) : null;
+}
+function deleteCookie(name){ document.cookie = name+"=; expires=Thu, 01 Jan 1970 00:00:00 GMT; path=/; SameSite=Lax"; }
+
+/* ============================================================
+   STEAM — имитация OAuth
+   ============================================================ */
+const STEAM_AVATAR_BASE = "https://avatars.akamai.steamstatic.com/";
+function fakeSteamPersona(nick){
+  // детерминированная псевдо-аватарка на основе ника
+  const hue = Math.floor((hashStr(nick)%360));
+  return { name: nick, url: null };  // рисуем цветной аватар
+}
+function hashStr(s){ let h=0; for(let i=0;i<s.length;i++){ h=(h*31+s.charCodeAt(i))|0; } return Math.abs(h); }
+
+const STEAM_OPENID = "https://steamcommunity.com/openid/login";
+// Привязанный к сайту адрес, куда Steam вернёт пользователя после входа.
+// Steam НЕ принимает file:// — он принимает только http:// или https://.
+// Если сайт открыт просто файлом, вход через Steam не сработает. Ниже — автоопределение.
+let APP_URL = (window.location.protocol === "http:" || window.location.protocol === "https:")
+  ? window.location.origin
+  : "";
+
+// Начать авторизацию Steam — чистый OpenID, прямо из браузера, БЕЗ ключа и без сервера.
+// Steam сам показывает страницу «Valve не имеет отношения к этому сайту...», вы входите
+// своей учёткой Steam, и Steam возвращает вас на наш сайт с вашим SteamID в адресе.
+function steamAuth(){
+  // Автоопределение каждый раз при нажатии кнопки.
+  APP_URL = (window.location.protocol === "http:" || window.location.protocol === "https:")
+    ? window.location.origin
+    : "";
+  // Если сайт открыт как файл — Steam не примет вход. Объясняем по-русски.
+  if(!APP_URL || !/^https?:\/\//.test(APP_URL)){
+    alert("Похоже, сайт открыт как файл (file://). Steam не умеет возвращать пользователя на file://-адреса и выдаёт «invalid return protocol».\n\nВместо двойного клика откройте сайт через локальный сервер:\n1) Запустите в PowerShell (в папке сайта):  .\\run-server.ps1\n2) Откройте в браузере:  http://localhost:3000\n\nТогда вход через Steam заработает (без установки чего-либо).\n\nЕсли хотите зелёный замок https:// — загрузите сайт на хостинг или GitHub Pages.");
+    return;
+  }
+  const returnTo = APP_URL + "/";
+  const params = new URLSearchParams({
+    "openid.ns": "http://specs.openid.net/auth/2.0",
+    "openid.mode": "checkid_setup",
+    "openid.return_to": returnTo,
+    "openid.realm": APP_URL,
+    "openid.identity": "http://specs.openid.net/auth/2.0/identifier_select",
+    "openid.claimed_id": "http://specs.openid.net/auth/2.0/identifier_select",
+  });
+  window.location.href = STEAM_OPENID + "?" + params.toString();
+}
+
+// Steam вернул нас обратно: в адресе теперь openid.identity вида
+// https://steamcommunity.com/openid/id/7656119... — это и есть привязка.
+function parseSteamId(identity){
+  const m = String(identity).match(/\/id\/(\d+)/);
+  return m ? m[1] : null;
+}
+
+// Завершаем привязку: записываем steamID64 к аккаунту и открываем мессенджер.
+function completeSteam(steamId){
+  currentUser.steam = { steamId, linked: true };
+  currentUser.nick = "Gamer_" + steamId.slice(-4);
+  addBetaFriend();
+  saveAll();
+  setCookie(COOKIE_NAME, currentUser.id, 30);
+  // убрать openid-параметры из адреса, чтобы не привязывалось заново при обновлении
+  try{ history.replaceState({}, "", window.location.origin + window.location.pathname); }catch(e){}
+  enterApp();
+  notifyMsg("Steam", "Steam привязан (ID …"+steamId.slice(-4)+")", true);
+}
+
+// Единственный друг — «Бета» (остальные демо-друзья удалены).
+function addBetaFriend(){
+  const BETA_ID = "steam_beta";
+  if(state.users.find(u=>u.id===BETA_ID)) return;
+  state.users.push({
+    id: BETA_ID, nick:"Бета", email:"beta@steam.local", pass:"steam",
+    bio:"Твой бета-друг из Steam", online:true, steam:true
+  });
+  if(!state.chats[BETA_ID]){
+    const now=Date.now();
+    state.chats[BETA_ID]=[
+      {from:"them", text:"Привет! Ты привязал Steam? \ud83c\udfae", t:now-3600000, n:"Бета"},
+      {from:"me", text:"Да, теперь мы на связи!", t:now-3500000},
+    ];
+  }
+  initStory();
+}
+
+function seedChat(login,nick){
+  const now=Date.now();
+  return [
+    {from:"them", text:"Привет! Ты онлайн? \ud83d\ude80", t:now-3600000, n:nick},
+    {from:"them", text:"Загляни потом в заметки, я там всё оставил.", t:now-3500000, n:nick},
+  ];
+}
+
+/* ============================================================
+   ID helpers
+   ============================================================ */
+let uidSeq = lsGet(LS_PREFIX+"uidseq", 100);
+function newId(){ uidSeq++; lsSet(LS_PREFIX+"uidseq", uidSeq); return "u"+uidSeq; }
+function id_self(){ return currentUser ? currentUser.id : null; }
+function timeStr(t){ const d=new Date(t); const h=d.getHours().toString().padStart(2,"0"); const m=d.getMinutes().toString().padStart(2,"0"); return h+":"+m; }
+function todayStr(d){ return d.toISOString().slice(0,10); }
+
+/* ============================================================
+   AUTH
+   ============================================================ */
+function showView(v){
+  $$("#loginView").classList.toggle("hidden", v!=="login");
+  $$("#regView").classList.toggle("hidden", v!=="reg");
+  $$("#loginErr").textContent=""; $$("#regErr").textContent="";
+}
+function loadAll(){
+  const us=lsGet(LS_PREFIX+"users", null);
+  if(Array.isArray(us)) state.users = us;
+  else state.users = demoUsers();
+  state.chats = lsGet(LS_PREFIX+"chats", {});
+  state.notes = lsGet(LS_PREFIX+"notes", {});
+  state.bio   = lsGet(LS_PREFIX+"bio", {});
+}
+function saveAll(){
+  lsSet(LS_PREFIX+"users", state.users);
+  lsSet(LS_PREFIX+"chats", state.chats);
+  lsSet(LS_PREFIX+"notes", state.notes);
+  lsSet(LS_PREFIX+"bio", state.bio);
+}
+function demoUsers(){
+  // Демо-друзья удалены. Остаётся только бета-друг «Бета».
+  const beta = {id:"steam_beta", nick:"Бета", email:"beta@steam.local", pass:"steam",
+    bio:"Твой бета-друг из Steam", online:true, steam:true};
+  return [beta];
+}
+function register(){
+  const nick=$$("#regNick").value.trim(), email=$$("#regEmail").value.trim().toLowerCase(),
+        pass=$$("#regPass").value, bio=$$("#regBio").value.trim();
+  if(nick.length<2){ $$("#regErr").textContent="Ник слишком короткий"; return; }
+  if(!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)){ $$("#regErr").textContent="Неверный email"; return; }
+  if(pass.length<4){ $$("#regErr").textContent="Пароль минимум 4 символа"; return; }
+  if(state.users.find(u=>u.email===email||u.nick.toLowerCase()===nick.toLowerCase())){
+    $$("#regErr").textContent="Аккаунт с таким ником/email уже есть"; return;
+  }
+  const u={id:newId(), nick, email, pass, bio, online:true, created:Date.now()};
+  state.users.push(u); saveAll();
+  loginAs(u);
+}
+function doRegister(){ register(); }
+function login(){
+  const ident=$$("#loginId").value.trim().toLowerCase();
+  const pass=$$("#loginPass").value;
+  let u=state.users.find(x=>x.email===ident || x.nick.toLowerCase()===ident);
+  if(!u){ $$("#loginErr").textContent="Аккаунт не найден"; return; }
+  if(u.pass!==pass){ $$("#loginErr").textContent="Неверный пароль"; return; }
+  u.online=true; saveAll();
+  loginAs(u);
+}
+function doLogin(){ login(); }
+function loginAs(u){
+  currentUser=u;
+  setCookie(COOKIE_NAME, u.id, 30); // сессия на 30 дней — не слетает
+  if(u.steam && u.steam.linked){ enterApp(); }
+  else { showSteamRequired(); }
+}
+function showSteamRequired(){
+  // Привязка Steam обязательна — без неё в мессенджер не попасть.
+  $$("#steamPendingNick").textContent = currentUser ? currentUser.nick : "";
+  $$("#app").classList.remove("show");
+  showView("login");
+  $$("#loginView").classList.add("hidden");
+  $$("#regView").classList.add("hidden");
+  $$("#steamView").classList.remove("hidden");
+  $$("#auth").style.display="flex";
+}
+function logout(fromSteamView){
+  if(currentUser){ currentUser.online=false; saveAll(); }
+  currentUser=null; activeChat=null;
+  deleteCookie(COOKIE_NAME);
+  renderAll();
+  $$("#app").classList.remove("show");
+  $$("#steamView").classList.add("hidden");
+  $$("#auth").style.display="flex";
+  showView("login");
+}
+
+/* ============================================================
+   ENTER APP
+   ============================================================ */
+function enterApp(){
+  $$("#auth").style.display="none";
+  $$("#app").classList.add("show");
+  applyNotifUI();
+  renderAll();
+  paidCookieCheck();
+  notifyMsg("Steam", "Добро пожаловать, "+currentUser.nick+"!", true /*init*/);
+}
+
+/* ============================================================
+   RENDER
+   ============================================================ */
+function renderAll(){
+  if(!currentUser) return;
+  renderMe(); renderChats(); renderStories();
+  if(activeChat) renderMessages(activeChat);
+  else { $$("#welcome").style.display="flex"; $$("#messages").classList.add("hidden"); $$("#composer").classList.add("hidden"); $$("#chathead").classList.add("hidden"); $$("#storiesbar").classList.add("hidden"); }
+}
+
+function renderMe(){
+  setAva($$("#myAva"), currentUser);
+  $$("#myName").textContent = currentUser.steam ? currentUser.steam.name + " \ud83c\udfae" : currentUser.nick;
+  $$("#myStatus").textContent = (currentUser.steam?.linked ? "Steam " : "") + "в сети";
+  $$("#welcomeHint").textContent = currentUser.steam?.linked ? "Вы в системе как: "+currentUser.steam.name+" (Steam)" : "Вы вошли как: "+currentUser.nick;
+}
+function setAva(el, u, sizeClass){
+  el.innerHTML="";
+  const letter=(u.nick||u.steam?.name||"?").charAt(0).toUpperCase();
+  const hue=hashStr(u.id||u.nick)%360;
+  el.style.background=`linear-gradient(135deg, hsl(${hue},55%,45%), hsl(${(hue+40)%360},55%,35%))`;
+  const sp=document.createElement("span");
+  if(!sizeClass) sp.style.fontSize="20px";
+  sp.textContent=letter; el.appendChild(sp);
+}
+
+function renderChats(){
+  const list=$$("#chatlist"); list.innerHTML="";
+  const q=($$("#searchInput").value||"").toLowerCase();
+  const chatIds=Object.keys(state.chats).filter(cid=>cid!==id_self());
+  chatIds.sort((a,b)=>{ const la=lastMsg(state.chats[a]), lb=lastMsg(state.chats[b]); return (lb?lb.t:0)-(la?la.t:0); });
+  for(const cid of chatIds){
+    const u=state.users.find(x=>x.id===cid); if(!u) continue;
+    const nm=(u.nick||"").toLowerCase();
+    if(q && !nm.includes(q)) continue;
+    const msgs=state.chats[cid]||[];
+    const last=lastMsg(msgs);
+    const un=unread[cid]||0;
+    const div=document.createElement("div");
+    div.className="chatitem"+(activeChat===cid?" active":"");
+    div.onclick=()=>openChat(cid);
+    const cava=document.createElement("div"); cava.className="cava"+(u.online?" on":""); setAva(cava,u,true);
+    const body=document.createElement("div"); body.className="cbody";
+    const r1=document.createElement("div"); r1.className="row1";
+    r1.innerHTML=`<b>${esc(u.nick)}</b><time>${last?timeStr(last.t):""}</time>`;
+    const r2=document.createElement("div"); r2.className="row2";
+    r2.innerHTML=`<span>${last?esc(last.text):"Нет сообщений"}</span>${un?`<i>${un}</i>`:""}`;
+    body.appendChild(r1); body.appendChild(r2);
+    div.appendChild(cava); div.appendChild(body);
+    list.appendChild(div);
+  }
+  if(!list.children.length){
+    list.innerHTML=`<div style="text-align:center;color:var(--muted);padding:30px;font-size:14px;">Аккаунт только что создан.<br>Загляните во вкладку Steam, чтобы добавить друзей из Steam.</div>`;
+  }
+}
+function lastMsg(arr){ if(!arr||!arr.length) return null; return arr[arr.length-1]; }
+function esc(s){ return String(s==null?"":s).replace(/[&<>"']/g, c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c])); }
+
+function switchTab(t){
+  document.querySelectorAll(".tab").forEach(b=>b.classList.toggle("active", b.dataset.tab===t));
+  renderChats();
+}
+
+function openChat(cid){
+  activeChat=cid;
+  unread[cid]=0;
+  renderMessages(cid);
+  // mobile
+  $$("#chatpanel").classList.add("open");
+}
+function closeChat(){
+  $$("#chatpanel").classList.remove("open");
+}
+function renderMessages(cid){
+  const u=state.users.find(x=>x.id===cid); if(!u) return;
+  $$("#welcome").style.display="none";
+  $$("#messages").classList.remove("hidden");
+  $$("#composer").classList.remove("hidden");
+  $$("#chathead").classList.remove("hidden");
+  $$("#storiesbar").classList.remove("hidden");
+  const headAva=$$("#headAva"); setAva(headAva,u,true);
+  $$("#headName").textContent=u.nick;
+  $$("#headStatus").textContent = u.online ? "в сети \u25cf" : "был(а) недавно";
+  const msgs=state.chats[cid]||[];
+  const box=$$("#messages"); box.innerHTML="";
+  let lastDay="";
+  for(const m of msgs){
+    const day=todayStr(new Date(m.t));
+    if(day!==lastDay){
+      lastDay=day;
+      const dd=document.createElement("div"); dd.className="daydiv";
+      dd.innerHTML=`<span>${formatDay(m.t)}</span>`; box.appendChild(dd);
+    }
+    const div=document.createElement("div");
+    div.className="msg "+(m.from==="me"?"mine":"theirs");
+    if(m.from!=="me") div.insertAdjacentHTML("afterbegin", `<div class="name">${esc(u.nick)}</div>`);
+    const content = pBody(m);
+    if(m.from==="me") div.innerHTML=content+`<span class="date">${timeStr(m.t)} ✓✓</span>`;
+    else div.innerHTML=content+`<span class="date">${timeStr(m.t)}</span>`;
+    box.appendChild(div);
+  }
+  box.scrollTop=box.scrollHeight;
+}
+function pBody(m){
+  // текст сообщения, экранированный
+  return '<span>'+esc(m.text)+'</span>';
+}
+function formatDay(t){
+  const d=new Date(t), now=new Date();
+  const same=d.toDateString()===now.toDateString();
+  if(same)return "Сегодня";
+  const y=d.toDateString()===new Date(now-86400000).toDateString();
+  if(y)return "Вчера";
+  return d.toLocaleDateString("ru-RU",{day:"numeric",month:"long"});
+}
+
+function sendMsg(){
+  if(!activeChat)return;
+  const inp=$$("#msgInput");
+  const text=inp.value.trim(); if(!text)return;
+  const msgs=state.chats[activeChat]||[];
+  msgs.push({from:"me", text, t:Date.now()});
+  state.chats[activeChat]=msgs;
+  inp.value="";
+  saveAll();
+  renderMessages(activeChat); renderChats();
+  maybeEcho(activeChat, text);
+}
+function maybeEcho(cid, text){
+  // Осмысленный автоответ от «Беты»: подбираем реплику по смыслу сказанного.
+  const u=state.users.find(x=>x.id===cid); if(!u) return;
+  setTimeout(()=>{
+    const r2 = replyFor(text);
+    const msgs=state.chats[cid]||[];
+    msgs.push({from:"them", text:r2, t:Date.now(), n:u.nick});
+    state.chats[cid]=msgs;
+    saveAll();
+    if(activeChat===cid){ renderMessages(cid); }
+    renderChats();
+    doNotify(cid, true);
+  }, 1100+Math.random()*1400);
+}
+function replyFor(text){
+  const t = String(text||"").toLowerCase();
+  function has(...words){ return words.some(w=>t.includes(w)); }
+
+  if(has("привет","здравствуй","здаров","хай","салют","hi","hello","добрый")){
+    return "Привет! Как сам?\ud83d\ude0a";
+  }
+  if(has("как дела","как ты","как сам","что нового","как жизнь","как настроение")){
+    return "Да норм, в кооп играю. А у тебя как?\ud83c\udfae";
+  }
+  if(has("занят","работа","учусь","дела","не могу","задолбал","устал")){
+    return "Понимаю, бывает. Отдохнёшь — напиши.\ud83d\ude4c";
+  }
+  if(has("го","пошли","погнали","давай сыгра","катка","реплей","вместе","кооп","дуо","соло")){
+    return "Ага, давай! Щас только клиента запущу.\ud83d\ude80";
+  }
+  if(has("спасибо","благодарю","спс","сенкс","круто","класс","топ","реально круто")){
+    return "Да не за что! Всегда рад помочь.\ud83d\udc4d";
+  }
+  if(has("смешно","лол","хаха","ахаха","кайф","прикол")){
+    return "Ахаха, угар \ud83d\ude06";
+  }
+  if(has("грустн","плохо","один","скучн","пнх","захожу")){
+    return "Эй, всё так плохо? Заходи, поболтаем, отвлечёт.\ud83d\ude4a";
+  }
+  if(has("понял")){
+    return "Ясно, понял.\ud83d\udc4c";
+  }
+  if(has("что понял","чо понял","чо","не понял")){
+    return "Сорри, я просто согласился, не вникнул. Повтори ещё раз?\ud83d\ude42";
+  }
+  if(has("заметки","заметку")){
+    return "А, точно, глянь заметки, я там записал.\ud83d\udcdd";
+  }
+  if(has("истории","история")){
+    return "Глянь историю, я её недавно выложил!\ud83c\udf9e\ufe0f";
+  }
+  if(has("ключ","api","стим","steam","привяз")){
+    return "По Steam — привязка простая, без ключа работает. Жми войти через Steam.\ud83c\udfae";
+  }
+  if(has("ок","ладно","ага","да","хорошо","збс","пон,","ясно","норм")){
+    return "Ок, договорились!\ud83d\udc4c";
+  }
+  if(has("?")){
+    return "Хм, хороший вопрос. Дай подумать…\ud83e\udd14";
+  }
+  // Ничего не распознал — честно просим уточнить, а не несём отсебятину.
+  return "Не совсем понял, о чём ты. Расскажи подробнее?\ud83d\ude42";
+}
+
+/* ============================================================
+   STORIES
+   ============================================================ */
+let stories = []; let curStoryIdx=0; let curSlide=0;
+function initStory(){
+  if(!state.stories || !state.stories.length) state.stories = seedStories();
+}
+function seedStories(){
+  const now=Date.now();
+  const betaId = "steam_beta";
+  return [
+    {id:"s1", user:betaId, seen:false, items:[
+      {t:"Привет из Steam! Зацени мой новый скин \ud83d\ude80", time:now-3600000},
+      {t:"Кто в кооп сегодня вечером?", time:now-3000000},
+    ]},
+    {id:"s2", user:betaId, seen:false, items:[
+      {t:"Нашёл идеальную игру, всем советую! \ud83c\udfae", time:now-7200000},
+    ]},
+  ];
+}
+function renderStories(){
+  const bar=$$("#storiesbar"); bar.innerHTML="";
+  // свои истории
+  for(const s of state.stories||[]){
+    const u=state.users.find(x=>x.id===s.user); if(!u)continue;
+    const el=document.createElement("div");
+    el.className="story"+(s.seen?" seen":"");
+    el.innerHTML=`<div class="ring"><div class="ringinner">${emojiFor(u)}</div></div><span>${esc(u.nick)}</span>`;
+    el.onclick=()=>openStory(s.id);
+    bar.appendChild(el);
+  }
+  if(bar.children.length===0) bar.classList.add("hidden");
+}
+function emojiFor(u){ const h=hashStr(u.id)%4; return ["\ud83c\udfae","\ud83d\udd79\ufe0f","\ud83e\udd16","\ud83d\ude80"][h]; }
+function openStory(id){
+  const i=state.stories.findIndex(s=>s.id===id); if(i<0)return;
+  curStoryIdx=i; curSlide=0;
+  showStoryViewer();
+}
+function showStoryViewer(){
+  const s=state.stories[curStoryIdx];
+  const u=state.users.find(x=>x.id===s.user);
+  $$("#storyviewer").classList.add("show");
+  setAva($$("#svAva"), u, true);
+  $$("#svName").textContent=u.nick;
+  s.seen=true; lsSet(LS_PREFIX+"stories", state.stories);
+  renderStories();
+  paintStorySlide();
+}
+function paintStorySlide(){
+  const s=state.stories[curStoryIdx];
+  if(curSlide>=s.items.length){ closeStory(); return; }
+  const body=$$("#svBody"); body.innerHTML=`<div class="sv-note sv-bounce">${esc(s.items[curSlide].t)}</div>`;
+}
+function nextStory(){ curSlide++; paintStorySlide(); }
+function closeStory(){ $$("#storyviewer").classList.remove("show"); }
+
+/* ============================================================
+   NOTES & BIO
+   ============================================================ */
+function addNote(){
+  const inp=$$("#noteInput"); const text=inp.value.trim(); if(!text)return;
+  state.notes[id_self()] = state.notes[id_self()]||[];
+  state.notes[id_self()].unshift({text, t:Date.now()});
+  inp.value=""; saveAll(); renderNotes();
+}
+function renderNotes(){
+  const list=$$("#notesList"); list.innerHTML="";
+  const notes=state.notes[id_self()]||[];
+  if(!notes.length){ list.innerHTML=`<p style="color:var(--muted);font-size:14px;">Заметок пока нет. Добавьте первую!</p>`; return; }
+  for(let i=0;i<notes.length;i++){
+    const n=notes[i];
+    const el=document.createElement("div");
+    el.className="note-item";
+    el.innerHTML=`<p>${esc(n.text)}</p><time>${formatDay(n.t)} в ${timeStr(n.t)}</time>
+      <button class="note-del" title="Удалить" onclick="delNote(${i})">&#10005;</button>`;
+    list.appendChild(el);
+  }
+}
+function delNote(i){
+  state.notes[id_self()].splice(i,1); saveAll(); renderNotes();
+}
+function saveBio(){
+  const v=$$("#bioInput").value.trim();
+  state.bio[id_self()]=v;
+  currentUser.bio=v;
+  saveAll(); $$("#bioErr").textContent="Сохранено \u2713";
+  setTimeout(()=>$$("#bioErr").textContent="",1500);
+}
+
+/* ============================================================
+   NOTIFICATIONS (settings) — без звука / вибрация
+   ============================================================ */
+let notifEnabled = lsGet(NOTIF_KEY, true);
+let notifMode = lsGet(NOTIF_MODE_KEY, "silent"); // silent | vibro
+
+function toggleNotif(){
+  notifEnabled=!notifEnabled;
+  lsSet(NOTIF_KEY, notifEnabled);
+  applyNotifUI();
+}
+function setNotifMode(mode){
+  notifMode=mode;
+  lsSet(NOTIF_MODE_KEY, mode);
+  applyNotifUI();
+}
+function applyNotifUI(){
+  $$("#notifToggle").classList.toggle("on", notifEnabled);
+  $$("#notifToggle").style.opacity = notifEnabled?"1":".4";
+  document.querySelectorAll("#notifSeg button").forEach(b=>b.classList.toggle("on", b.dataset.n===notifMode));
+}
+function doNotify(cid, cameFromEcho){
+  if(!notifEnabled)return;
+  if(activeChat===cid)return; // в открытом чате не беспокоим
+  unread[cid]=(unread[cid]||0)+1;
+  renderChats();
+  // вибрация
+  if(notifMode==="vibro" && navigator.vibrate){
+    try{ navigator.vibrate([120,50,120]); }catch(e){}
+  }
+}
+function notifyMsg(from, txt, isOwn){
+  // системное уведомление (вход / привязка Steam)
+  if(notifMode==="vibro" && notifEnabled && navigator.vibrate){
+    try{ navigator.vibrate(80); }catch(e){}
+  }
+}
+
+function toggleOnline(){
+  const t=$$("#onlineToggle");
+  currentUser.online=!currentUser.online;
+  t.classList.toggle("on", currentUser.online);
+  saveAll();
+}
+
+/* ============================================================
+   SETTINGS MODAL
+   ============================================================ */
+function openSettings(){
+  renderNotes(); renderAccInfo(); renderAbout();
+  $$("#settingsModal").classList.remove("hidden");
+}
+function closeSettings(){ $$("#settingsModal").classList.add("hidden"); }
+function closeAllModals(){ document.querySelectorAll(".overlay").forEach(o=>o.classList.add("hidden")); document.querySelectorAll("#storyviewer").forEach(s=>s.classList.remove("show")); }
+function switchSet(s){
+  document.querySelectorAll('.navtabs .t').forEach(b=>b.classList.toggle("active", b.dataset.s===s));
+  $$("#set-notif").classList.toggle("hidden", s!=="notif");
+  $$("#set-profile").classList.toggle("hidden", s!=="profile");
+  $$("#set-about").classList.toggle("hidden", s!=="about");
+}
+function renderAccInfo(){
+  $$("#accInfo").innerHTML = `Email: <b>${esc(currentUser.email)}</b><br>Steam: <b>${currentUser.steam?.linked ? esc(currentUser.steam.name) : "не привязан"}</b>`;
+}
+function renderAbout(){
+  setAva($$("#aboutAva"), currentUser, true);
+  $$("#aboutName").textContent=currentUser.nick;
+  $$("#bioInput").value = currentUser.bio || (currentUser.steam?.name||"");
+  $$("#onlineToggle").classList.toggle("on", currentUser.online!==false);
+}
+function showRawModal(html){
+  const ov=document.createElement("div"); ov.className="overlay center";
+  ov.innerHTML=html;
+  ov.addEventListener("click", e=>{ if(e.target===ov) ov.remove(); });
+  document.body.appendChild(ov);
+}
+
+/* ============================================================
+   DAILY COOKIE MESSAGE (полный экран) + выход
+   ============================================================ */
+function paidCookieCheck(){
+  if(!currentUser)return;
+  const today=todayStr(new Date());
+  const last=lsGet(COOKIE_ACCEPT_KEY, "");
+  if(last===today){ return; }
+  $$("#cookieMsg").textContent = "Каждый день мы показываем вам это, потому что вы вошли как «"+currentUser.nick+"» через cookies. Никаких действий от вас не требуется — это демонстрация полноэкранного уведомления о куки-данных.";
+  $$("#cookieOverlay").classList.add("show");
+}
+function acceptCookies(){
+  lsSet(COOKIE_ACCEPT_KEY, todayStr(new Date()));
+  $$("#cookieOverlay").classList.remove("show");
+}
+
+/* ============================================================
+   OUTSIDE CLICK CLOSERS
+   ============================================================ */
+document.addEventListener("click", e=>{
+  const settings=$$("#settingsModal");
+  if(settings && !settings.classList.contains("hidden") && e.target===settings){
+    settings.classList.add("hidden");
+  }
+});
+document.addEventListener("keydown", e=>{ if(e.key==="Escape"){ closeStory(); closeSettings(); } });
+
+/* ============================================================
+   INIT
+   ============================================================ */
+loadAll();
+initStory();
+// автовход по куки (сессия не слетает) + обработка возврата от Steam OpenID
+(function autoLogin(){
+  const qs = new URLSearchParams(window.location.search);
+  // Steam возвращает openid.identity вида https://steamcommunity.com/openid/id/7656...
+  const identity = qs.get("openid.identity");
+  const steamId = parseSteamId(identity);
+  const savedId=getCookie(COOKIE_NAME);
+  let u = savedId ? state.users.find(x=>x.id===savedId) : null;
+
+  // Сначала завершаем привязку Steam (Steam вернул нас обратно после входа)
+  if(u && steamId){
+    completeSteam(steamId);
+    return;
+  }
+
+  if(u){
+    u.online=true; saveAll();
+    loginAs(u);
+    return;
+  }
+  $$("#auth").style.display="flex";
+  showView("login");
+})();
+</script>
+</body>
+</html>
